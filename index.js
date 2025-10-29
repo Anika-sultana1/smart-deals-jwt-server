@@ -30,6 +30,23 @@ async function run() {
         const db = client.db('smart_db');
         const productsCollection = db.collection('products');
         const bidsCollection = db.collection('bids');
+        const usersCollection = db.collection('users');
+
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+            const email = req.body.email;
+            const query = { email: email }
+            const existingUser = await usersCollection.findOne(query);
+            
+            if (existingUser) {
+                res.send({message: 'user already exits. do not need to insert again'})
+            }
+            else {
+                const result = await usersCollection.insertOne(newUser);
+                res.send(result);
+            }
+        })
+
 
         app.get('/products', async (req, res) => {
             // const projectFields = { title: 1, price_min: 1, price_max: 1, image: 1 }
@@ -38,7 +55,7 @@ async function run() {
             console.log(req.query)
             const email = req.query.email;
             const query = {}
-            if(email){
+            if (email) {
                 query.email = email;
             }
 
@@ -81,12 +98,12 @@ async function run() {
             const result = await productsCollection.deleteOne(query);
             res.send(result);
         })
-        
+
         // bids related apis
-        app.get('/bids', async(req, res) =>{
+        app.get('/bids', async (req, res) => {
             const email = req.query.email;
             const query = {};
-            if(email){
+            if (email) {
                 query.buyer_email = email;
             }
 
@@ -95,7 +112,7 @@ async function run() {
             res.send(result);
         })
 
-        app.post('/bids', async(req, res) =>{
+        app.post('/bids', async (req, res) => {
             const newBid = req.body;
             const result = await bidsCollection.insertOne(newBid);
             res.send(result);
