@@ -5,6 +5,15 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./smart-deals-firebase-admin-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
 // middleware
 app.use(cors());
 app.use(express.json())
@@ -22,6 +31,31 @@ const client = new MongoClient(uri, {
 app.get('/', (req, res) => {
     res.send('Smart server is running')
 })
+
+const verifyFireBaseToken = async (req, res, next) =>{
+    
+    const authorization = req.headers.authorization;
+    if(!authorization){
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+    const token = authorization.split(' ')[1];
+    if(!token){
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+
+    // verify token
+    try{
+        const decoded = await admin.auth().verifyIdToken(token);
+        console.log('after decode token', decoded);
+        req.token_email = decoded.email;
+        next();
+    }
+    catch{
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+
+    
+}   
 
 async function run() {
     try {
@@ -107,11 +141,15 @@ async function run() {
         })
 
         // bids related apis
-        app.get('/bids', async (req, res) => {
+        app.get('/bids', verifyFireBaseToken, async (req, res) => {
+            
             const email = req.query.email;
             const query = {};
             if (email) {
                 query.buyer_email = email;
+                if(email !== req.token_email){
+                    return res.status(403).send({message: 'forbidden access'})
+                }
             }
 
             const cursor = bidsCollection.find(query);
