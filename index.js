@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./smart-deals-firebase-admin-key.json");
+const serviceAccount = require("./smart-deals-firebase-adminsdk.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -18,7 +18,10 @@ admin.initializeApp({
 app.use(cors());
 app.use(express.json())
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vyznij5.mongodb.net/?appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.sc7dsau.mongodb.net/?appName=Cluster0`;
+
+
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vyznij5.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -56,6 +59,32 @@ const verifyFireBaseToken = async (req, res, next) =>{
 
     
 }   
+const verifyFireBaseAuthToken = async(req, res, next)=>{
+
+    const authorization = req.headers.authorization;
+    if(!authorization){
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+    const token = authorization.split(' ')[1];
+    if(!token){
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+    // verify 
+    try{
+const decoded = await admin.auth().verifyIdToken(token)
+console.log('inside token', decoded)
+req.token_email = decoded.email;
+    next();
+
+    }
+    catch (error){
+return res.status(401).send({message: 'unauthorized access'})
+
+    }
+
+
+
+}
 
 async function run() {
     try {
@@ -107,12 +136,13 @@ async function run() {
 
         app.get('/products/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
+            const query = { _id: id }
             const result = await productsCollection.findOne(query);
             res.send(result);
         })
 
-        app.post('/products', async (req, res) => {
+        app.post('/products', verifyFireBaseAuthToken, async (req, res) => {
+            console.log('headers in the post', req.headers)
             const newProduct = req.body;
             const result = await productsCollection.insertOne(newProduct);
             res.send(result);
@@ -160,17 +190,21 @@ async function run() {
 
         app.get('/products/bids/:productId', async (req, res) => {
             const productId = req.params.productId;
+          console.log(productId)
             const query = { product: productId }
             const cursor = bidsCollection.find(query).sort({ bid_price: -1 })
             const result = await cursor.toArray();
             res.send(result);
         })
 
-        app.get('/bids', async (req, res) => {
+        app.get('/bids', verifyFireBaseAuthToken, async (req, res) => {
 
             const query = {};
             if (query.email) {
                 query.buyer_email = email;
+                if(email !== req.token_email){
+                    return res.statusMessage(403).send({message: 'forbidden access'})
+                }
             }
 
             const cursor = bidsCollection.find(query);
