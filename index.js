@@ -33,12 +33,12 @@ const client = new MongoClient(uri, {
     }
 });
 
-// app.get('/', (req, res) => {
-//     res.send('Smart server is running')
-// })
+app.get('/', (req, res) => {
+    res.send('Smart server is running')
+})
 
 
-module.exports = app;
+
 
 const verifyFireBaseToken = async (req, res, next) =>{
     
