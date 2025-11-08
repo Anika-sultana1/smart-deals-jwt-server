@@ -33,13 +33,10 @@ const client = new MongoClient(uri, {
     }
 });
 
-// Example in server.js or index.js
-// if (process.env.NODE_ENV !== 'production') {
-//     app.listen(3000, () => {
-//         console.log('Server is running on port 3000');
-//     });
-// }
-// Vercel handles the server, it doesn't need app.listen()
+app.get('/', (req, res) => {
+    res.send('Smart server is running')
+})
+
 
 
 
@@ -247,11 +244,9 @@ async function run() {
 
 run().catch(console.dir)
 
-// app.listen(port, () => {
-//     console.log(`Smart server is running on port: ${port}`)
-// })
-
-module.exports = app;
+app.listen(port, () => {
+    console.log(`Smart server is running on port: ${port}`)
+})
 
 // client.connect()
 //     .then(() => {
